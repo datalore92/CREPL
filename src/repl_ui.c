@@ -1,4 +1,5 @@
 #include "../include/repl_ui.h"
+#include <stdio.h>
 #include <string.h>
 
 void repl_render_text(REPL* repl, const char* text, int x, int y, SDL_Color color) {
