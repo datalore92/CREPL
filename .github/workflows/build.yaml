@@ -30,15 +30,25 @@ jobs:
           curl -L https://github.com/libsdl-org/SDL/releases/download/release-2.32.4/SDL2-devel-2.32.4-mingw.zip -o SDL2.zip
           curl -L https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.24.0/SDL2_ttf-devel-2.24.0-mingw.zip -o SDL2_ttf.zip
           
-          # Extract the archives (note the proper 7z syntax)
+          # Extract the archives
           7z x SDL2.zip
           7z x SDL2_ttf.zip
+          
+          # Create the lib directory structure
+          mkdir -p lib/SDL2
+          mkdir -p lib/SDL2_ttf
+          
+          # Copy SDL2 files to the lib directory
+          xcopy /E /I SDL2-2.32.4\* lib\SDL2\SDL2-2.32.4\
+          
+          # Copy SDL2_ttf files to the lib directory
+          xcopy /E /I SDL2_ttf-2.24.0\* lib\SDL2_ttf\SDL2_ttf-2.24.0\
 
       - name: Build with MinGW
         run: |
           mkdir -p build
           cd build
-          cmake -G "MinGW Makefiles" -DSDL2_DIR=../SDL2-2.32.4 -DSDL2_TTF_DIR=../SDL2_ttf-2.24.0 ..
+          cmake -G "MinGW Makefiles" ..
           mingw32-make VERBOSE=1
 
       - name: Create Release Zip
