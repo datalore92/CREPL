@@ -1,5 +1,6 @@
 #include "../include/repl_variables.h"
 #include <string.h>
+#include <stdio.h>
 
 void repl_set_variable(REPL* repl, const char* name, double value) {
     // Check if variable already exists

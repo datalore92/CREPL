@@ -1,6 +1,7 @@
 #include "../include/repl_ui.h"
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 
 void repl_render_text(REPL* repl, const char* text, int x, int y, SDL_Color color) {
     repl_render_styled_text(repl, text, x, y, color, false);

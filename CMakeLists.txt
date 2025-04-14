@@ -109,6 +109,9 @@ endif()
 if(WIN32)
     set_target_properties(crepl PROPERTIES WIN32_EXECUTABLE TRUE)
     target_link_libraries(crepl mingw32)
+    
+    # Add msvcrt for setjmp function needed by SDL2_ttf
+    target_link_options(crepl PRIVATE -lmsvcrt)
 endif()
 
 # Add compile definitions for platform-specific code
