@@ -26,42 +26,45 @@ jobs:
 
       - name: Install SDL2 and SDL2_ttf
         run: |
-          # Download SDL2 and SDL2_ttf
+          # Download and extract SDL2
           curl -L https://github.com/libsdl-org/SDL/releases/download/release-2.32.4/SDL2-devel-2.32.4-mingw.zip -o SDL2.zip
+          7z x SDL2.zip -oC:/
+          
+          # Download and extract SDL2_ttf
           curl -L https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.24.0/SDL2_ttf-devel-2.24.0-mingw.zip -o SDL2_ttf.zip
+          7z x SDL2_ttf.zip -oC:/
           
-          # Extract the archives
-          7z x SDL2.zip
-          7z x SDL2_ttf.zip
+          # Create SDL2 structure
+          mkdir -p C:/SDL2/include/SDL2
+          mkdir -p C:/SDL2/lib
           
-          # Create the lib directory structure
-          mkdir -p lib/SDL2
-          mkdir -p lib/SDL2_ttf
+          # Create SDL2_ttf structure
+          mkdir -p C:/SDL2_ttf/include/SDL2
+          mkdir -p C:/SDL2_ttf/lib
           
-          # Copy SDL2 files to the lib directory
-          xcopy /E /I SDL2-2.32.4\* lib\SDL2\SDL2-2.32.4\
+          # Copy SDL2 files
+          Copy-Item -Path C:/SDL2-2.32.4/x86_64-w64-mingw32/include/*.h -Destination C:/SDL2/include/SDL2/ -Recurse
+          Copy-Item -Path C:/SDL2-2.32.4/x86_64-w64-mingw32/lib/* -Destination C:/SDL2/lib/ -Recurse
           
-          # Copy SDL2_ttf files to the lib directory
-          xcopy /E /I SDL2_ttf-2.24.0\* lib\SDL2_ttf\SDL2_ttf-2.24.0\
+          # Copy SDL2_ttf files
+          Copy-Item -Path C:/SDL2_ttf-2.24.0/x86_64-w64-mingw32/include/*.h -Destination C:/SDL2_ttf/include/SDL2/ -Recurse
+          Copy-Item -Path C:/SDL2_ttf-2.24.0/x86_64-w64-mingw32/lib/* -Destination C:/SDL2_ttf/lib/ -Recurse
 
       - name: Build with MinGW
         run: |
           mkdir -p build
           cd build
-          cmake -G "MinGW Makefiles" ..
+          cmake -G "MinGW Makefiles" -DCMAKE_PREFIX_PATH="C:/SDL2;C:/SDL2_ttf" ..
           mingw32-make VERBOSE=1
 
       - name: Create Release Zip
         run: |
           mkdir release
           copy build\crepl.exe release\crepl.exe
-          
-          # Copy required DLLs
-          copy SDL2-2.32.4\x86_64-w64-mingw32\bin\SDL2.dll release\
-          copy SDL2_ttf-2.24.0\x86_64-w64-mingw32\bin\SDL2_ttf.dll release\
-          copy SDL2_ttf-2.24.0\x86_64-w64-mingw32\bin\zlib1.dll release\
-          copy SDL2_ttf-2.24.0\x86_64-w64-mingw32\bin\freetype.dll release\
-          
+          copy C:\SDL2-2.32.4\x86_64-w64-mingw32\bin\SDL2.dll release\
+          copy C:\SDL2_ttf-2.24.0\x86_64-w64-mingw32\bin\SDL2_ttf.dll release\
+          copy C:\SDL2_ttf-2.24.0\x86_64-w64-mingw32\bin\zlib1.dll release\
+          copy C:\SDL2_ttf-2.24.0\x86_64-w64-mingw32\bin\freetype.dll release\
           cd release
           7z a ..\crepl-windows.zip *
 
