@@ -24,12 +24,25 @@ jobs:
       - name: Add MinGW to PATH
         run: echo "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
+      - name: Install SDL2 and SDL2_ttf
+        run: |
+          # Create directories for SDL2 and SDL2_ttf
+          mkdir -p C:/SDL2
+          mkdir -p C:/SDL2_ttf
+          
+          # Download and extract SDL2
+          curl -L https://github.com/libsdl-org/SDL/releases/download/release-2.32.4/SDL2-devel-2.32.4-mingw.zip -o SDL2.zip
+          7z x SDL2.zip -o.
+          
+          # Download and extract SDL2_ttf
+          curl -L https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.24.0/SDL2_ttf-devel-2.24.0-mingw.zip -o SDL2_ttf.zip
+          7z x SDL2_ttf.zip -o.
+
       - name: Build with MinGW
         run: |
           mkdir -p build
           cd build
-          # Use the SDL2 and SDL2_ttf libraries from the lib folder
-          cmake -G "MinGW Makefiles" ..
+          cmake -G "MinGW Makefiles" -DSDL2_DIR=../SDL2-2.32.4 -DSDL2_TTF_DIR=../SDL2_ttf-2.24.0 ..
           mingw32-make VERBOSE=1
 
       - name: Create Release Zip
@@ -37,11 +50,11 @@ jobs:
           mkdir release
           copy build\crepl.exe release\crepl.exe
           
-          # Copy required DLLs from the lib folder
-          copy lib\SDL2\SDL2-2.32.4\lib\x64\SDL2.dll release\
-          copy lib\SDL2_ttf\SDL2_ttf-2.24.0\lib\x64\SDL2_ttf.dll release\
-          copy lib\SDL2_ttf\SDL2_ttf-2.24.0\lib\x64\zlib1.dll release\
-          copy lib\SDL2_ttf\SDL2_ttf-2.24.0\lib\x64\freetype.dll release\
+          # Copy required DLLs
+          copy SDL2-2.32.4\x86_64-w64-mingw32\bin\SDL2.dll release\
+          copy SDL2_ttf-2.24.0\x86_64-w64-mingw32\bin\SDL2_ttf.dll release\
+          copy SDL2_ttf-2.24.0\x86_64-w64-mingw32\bin\zlib1.dll release\
+          copy SDL2_ttf-2.24.0\x86_64-w64-mingw32\bin\freetype.dll release\
           
           cd release
           7z a ..\crepl-windows.zip *
