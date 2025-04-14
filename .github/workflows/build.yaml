@@ -33,13 +33,22 @@ jobs:
           # Verify include paths
           Get-ChildItem lib/SDL2/SDL2-2.32.4/include
           Get-ChildItem lib/SDL2_ttf/SDL2_ttf-2.24.0/include
+          
+          # Verify library paths
+          Get-ChildItem lib/SDL2/SDL2-2.32.4/lib/x64
+          Get-ChildItem lib/SDL2_ttf/SDL2_ttf-2.24.0/lib/x64
 
       - name: Build with MinGW
         run: |
           mkdir -p build
           cd build
-          # Explicitly specify SDL2 and SDL2_ttf paths with correct include directories
+          # Need to pass library paths in a way MinGW can understand
           cmake -G "MinGW Makefiles" .. -DCMAKE_C_FLAGS="-I../lib/SDL2/SDL2-2.32.4/include -I../lib/SDL2_ttf/SDL2_ttf-2.24.0/include" -DSDL2_INCLUDE_DIR="../lib/SDL2/SDL2-2.32.4/include" -DSDL2_TTF_INCLUDE_DIR="../lib/SDL2_ttf/SDL2_ttf-2.24.0/include" -DSDL2_LIBRARY="../lib/SDL2/SDL2-2.32.4/lib/x64/SDL2.lib;../lib/SDL2/SDL2-2.32.4/lib/x64/SDL2main.lib" -DSDL2_TTF_LIBRARY="../lib/SDL2_ttf/SDL2_ttf-2.24.0/lib/x64/SDL2_ttf.lib"
+          
+          # For debugging purposes - examine CMake cache
+          cat CMakeCache.txt | grep -i SDL
+          
+          # Use different syntax for linking
           mingw32-make VERBOSE=1
 
       - name: Create Release Zip
