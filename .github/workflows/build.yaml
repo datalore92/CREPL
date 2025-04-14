@@ -38,8 +38,9 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          cmake -G "MinGW Makefiles" ..
-          mingw32-make
+          # Explicitly specify SDL2 and SDL2_ttf paths with correct include directories
+          cmake -G "MinGW Makefiles" .. -DCMAKE_C_FLAGS="-I../lib/SDL2/SDL2-2.32.4/include -I../lib/SDL2_ttf/SDL2_ttf-2.24.0/include" -DSDL2_INCLUDE_DIR="../lib/SDL2/SDL2-2.32.4/include" -DSDL2_TTF_INCLUDE_DIR="../lib/SDL2_ttf/SDL2_ttf-2.24.0/include" -DSDL2_LIBRARY="../lib/SDL2/SDL2-2.32.4/lib/x64/SDL2.lib;../lib/SDL2/SDL2-2.32.4/lib/x64/SDL2main.lib" -DSDL2_TTF_LIBRARY="../lib/SDL2_ttf/SDL2_ttf-2.24.0/lib/x64/SDL2_ttf.lib"
+          mingw32-make VERBOSE=1
 
       - name: Create Release Zip
         run: |
