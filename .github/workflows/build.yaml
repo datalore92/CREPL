@@ -135,6 +135,11 @@ jobs:
               setupapi
               version
               winmm
+              ole32
+              oleaut32
+              rpcrt4
+              gdi32
+              uuid
           )
           
           # Set subsystem properties
