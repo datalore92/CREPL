@@ -65,8 +65,17 @@ jobs:
           # First, run CMake without SDL2 flags to ensure compiler check passes
           cmake -G "MinGW Makefiles" ..
           
-          # Then run cmake again with the SDL2 paths
-          cmake -G "MinGW Makefiles" .. -DSDL2_INCLUDE_DIR="../lib/SDL2/SDL2-2.32.4/include" -DSDL2_TTF_INCLUDE_DIR="../lib/SDL2_ttf/SDL2_ttf-2.24.0/include" -DSDL2_LIBRARY="../mingw_lib/libSDL2.a;../mingw_lib/libSDL2main.a" -DSDL2_TTF_LIBRARY="../mingw_lib/libSDL2_ttf.a"
+          # Set environment variables for the full paths to libraries
+          $SDL2_LIB = Resolve-Path "../mingw_lib/libSDL2.a"
+          $SDL2MAIN_LIB = Resolve-Path "../mingw_lib/libSDL2main.a"
+          $SDL2TTF_LIB = Resolve-Path "../mingw_lib/libSDL2_ttf.a"
+          
+          # Then run cmake again with the SDL2 paths using proper path format for libraries
+          cmake -G "MinGW Makefiles" .. `
+            -DSDL2_INCLUDE_DIR="../lib/SDL2/SDL2-2.32.4/include" `
+            -DSDL2_TTF_INCLUDE_DIR="../lib/SDL2_ttf/SDL2_ttf-2.24.0/include" `
+            -DSDL2_LIBRARY="$SDL2_LIB;$SDL2MAIN_LIB" `
+            -DSDL2_TTF_LIBRARY="$SDL2TTF_LIB"
           
           # Build the project
           mingw32-make VERBOSE=1
