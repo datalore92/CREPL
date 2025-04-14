@@ -67,15 +67,18 @@ include_directories(include ${SDL2_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
 # Source files - explicitly list source files instead of using GLOB
 # This ensures CMake properly detects when files are added/removed
 set(SOURCES
-    src/main.c
-    src/repl_core.c
-    src/repl_ui.c
-    src/repl_input.c
-    src/repl_variables.c
-    src/repl_history.c
-    src/repl_eval.c
-    # src/repl.c is no longer used - it has been replaced by modular implementation
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/main.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/repl_core.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/repl_ui.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/repl_input.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/repl_variables.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/repl_history.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/repl_eval.c"
 )
+# Add setjmp_alias.c for Windows to fix _setjmp/_longjmp linking
+if (WIN32)
+    list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/setjmp_alias.c")
+endif()
 
 # Create executable
 add_executable(crepl ${SOURCES})
