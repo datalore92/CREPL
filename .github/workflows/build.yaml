@@ -26,49 +26,45 @@ jobs:
 
       - name: Install SDL2 and SDL2_ttf
         run: |
+          # Create lib directory structure exactly matching local development environment
+          mkdir -p lib/SDL2
+          mkdir -p lib/SDL2_ttf
+          
           # Download and extract SDL2
           curl -L https://github.com/libsdl-org/SDL/releases/download/release-2.32.4/SDL2-devel-2.32.4-mingw.zip -o SDL2.zip
-          7z x SDL2.zip -oC:/
+          7z x SDL2.zip
           
           # Download and extract SDL2_ttf
           curl -L https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.24.0/SDL2_ttf-devel-2.24.0-mingw.zip -o SDL2_ttf.zip
-          7z x SDL2_ttf.zip -oC:/
+          7z x SDL2_ttf.zip
           
-          # Create SDL2 directory structure including bin directory
-          mkdir -p C:/SDL2/bin
-          mkdir -p C:/SDL2/include/SDL2
-          mkdir -p C:/SDL2/lib
-          mkdir -p C:/SDL2/lib/cmake/SDL2
+          # Create exact directory structure matching local environment
+          Move-Item SDL2-2.32.4 lib/SDL2/
+          Move-Item SDL2_ttf-2.24.0 lib/SDL2_ttf/
           
-          # Copy SDL2 files
-          Copy-Item -Path C:/SDL2-2.32.4/x86_64-w64-mingw32/include/*.h -Destination C:/SDL2/include/SDL2/ -Recurse
-          Copy-Item -Path C:/SDL2-2.32.4/x86_64-w64-mingw32/lib/*.* -Destination C:/SDL2/lib/ -Recurse
-          Copy-Item -Path C:/SDL2-2.32.4/x86_64-w64-mingw32/lib/cmake/SDL2/*.* -Destination C:/SDL2/lib/cmake/SDL2/ -Recurse
-          Copy-Item -Path C:/SDL2-2.32.4/x86_64-w64-mingw32/bin/*.* -Destination C:/SDL2/bin/ -Recurse
+          # Verify the directory structure
+          Get-ChildItem lib/SDL2
+          Get-ChildItem lib/SDL2_ttf
           
-          # Create SDL2_ttf directory structure
-          mkdir -p C:/SDL2_ttf/include/SDL2
-          mkdir -p C:/SDL2_ttf/lib
-          
-          # Copy SDL2_ttf files
-          Copy-Item -Path C:/SDL2_ttf-2.24.0/x86_64-w64-mingw32/include/*.h -Destination C:/SDL2_ttf/include/SDL2/ -Recurse
-          Copy-Item -Path C:/SDL2_ttf-2.24.0/x86_64-w64-mingw32/lib/*.* -Destination C:/SDL2_ttf/lib/ -Recurse
+          # Verify include paths
+          Get-ChildItem lib/SDL2/SDL2-2.32.4/include
+          Get-ChildItem lib/SDL2_ttf/SDL2_ttf-2.24.0/include
 
       - name: Build with MinGW
         run: |
           mkdir -p build
           cd build
-          cmake -G "MinGW Makefiles" -DCMAKE_PREFIX_PATH="C:/SDL2;C:/SDL2_ttf" ..
+          cmake -G "MinGW Makefiles" ..
           mingw32-make VERBOSE=1
 
       - name: Create Release Zip
         run: |
           mkdir release
           copy build\crepl.exe release\crepl.exe
-          copy C:\SDL2\bin\SDL2.dll release\
-          copy C:\SDL2_ttf-2.24.0\x86_64-w64-mingw32\bin\SDL2_ttf.dll release\
-          copy C:\SDL2_ttf-2.24.0\x86_64-w64-mingw32\bin\zlib1.dll release\
-          copy C:\SDL2_ttf-2.24.0\x86_64-w64-mingw32\bin\freetype.dll release\
+          copy lib\SDL2\SDL2-2.32.4\x86_64-w64-mingw32\bin\SDL2.dll release\
+          copy lib\SDL2_ttf\SDL2_ttf-2.24.0\x86_64-w64-mingw32\bin\SDL2_ttf.dll release\
+          copy lib\SDL2_ttf\SDL2_ttf-2.24.0\x86_64-w64-mingw32\bin\zlib1.dll release\
+          copy lib\SDL2_ttf\SDL2_ttf-2.24.0\x86_64-w64-mingw32\bin\freetype.dll release\
           cd release
           7z a ..\crepl-windows.zip *
 
