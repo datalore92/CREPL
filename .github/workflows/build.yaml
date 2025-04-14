@@ -55,9 +55,29 @@ jobs:
           # Create a directory for modified headers if needed
           mkdir -p include_sdl2
           
-          # Copy SDL2 header files for easier inclusion
-          Copy-Item -Path SDL2-2.32.4/x86_64-w64-mingw32/include/* -Destination include_sdl2/ -Recurse
-          Copy-Item -Path SDL2_ttf-2.24.0/x86_64-w64-mingw32/include/* -Destination include_sdl2/ -Recurse
+          # Create simple wrapper files directly instead of copying
+          @"
+          #ifndef SDL_H_WRAPPER
+          #define SDL_H_WRAPPER
+          
+          #include "${PWD}/SDL2-2.32.4/x86_64-w64-mingw32/include/SDL2/SDL.h"
+          
+          #endif /* SDL_H_WRAPPER */
+          "@ | Out-File -FilePath "include_sdl2/SDL.h" -Encoding utf8
+          Write-Host "Created SDL.h wrapper"
+          
+          @"
+          #ifndef SDL_TTF_H_WRAPPER
+          #define SDL_TTF_H_WRAPPER
+          
+          #include "${PWD}/SDL2_ttf-2.24.0/x86_64-w64-mingw32/include/SDL2/SDL_ttf.h"
+          
+          #endif /* SDL_TTF_H_WRAPPER */
+          "@ | Out-File -FilePath "include_sdl2/SDL_ttf.h" -Encoding utf8
+          Write-Host "Created SDL_ttf.h wrapper"
+          
+          # List created files
+          Get-ChildItem include_sdl2
 
       - name: Create simplified CMakeLists.txt directly
         run: |
@@ -76,10 +96,10 @@ jobs:
           # Include directories
           include_directories(
               "${CMAKE_CURRENT_SOURCE_DIR}/include"
+              "${SDL2_COMBINED_INCLUDE}"
               "${SDL2_INCLUDE_DIR}"
               "${SDL2_TTF_INCLUDE_DIR}"
-              "${SDL2_COMBINED_INCLUDE}"
-              "${SDL2_INCLUDE_DIR}/SDL2"  # Try with SDL2 subdirectory
+              "${SDL2_INCLUDE_DIR}/SDL2"
           )
           
           # Source files with explicit paths
@@ -124,40 +144,10 @@ jobs:
           # Write the CMakeLists.txt file
           Set-Content -Path "CMakeLists.txt" -Value $cmakeContent
 
-      - name: Inspect and fix header files if needed
+      - name: Inspect header files
         run: |
           # Check repl_core.h to see how it includes SDL.h
           Get-Content include/repl_core.h
-          
-          # Create a simple wrapper if needed
-          if (Test-Path "include_sdl2/SDL.h") {
-              Write-Host "SDL.h already exists in the include directory"
-          } else {
-              @"
-          #ifndef SDL_H_WRAPPER
-          #define SDL_H_WRAPPER
-          
-          #include "SDL2/SDL.h"
-          
-          #endif /* SDL_H_WRAPPER */
-          "@ | Out-File -FilePath "include_sdl2/SDL.h" -Encoding utf8
-              Write-Host "Created SDL.h wrapper"
-          }
-          
-          # Also create SDL_ttf.h wrapper if needed
-          if (Test-Path "include_sdl2/SDL_ttf.h") {
-              Write-Host "SDL_ttf.h already exists in the include directory"
-          } else {
-              @"
-          #ifndef SDL_TTF_H_WRAPPER
-          #define SDL_TTF_H_WRAPPER
-          
-          #include "SDL2/SDL_ttf.h"
-          
-          #endif /* SDL_TTF_H_WRAPPER */
-          "@ | Out-File -FilePath "include_sdl2/SDL_ttf.h" -Encoding utf8
-              Write-Host "Created SDL_ttf.h wrapper"
-          }
 
       - name: Build with MinGW
         run: |
