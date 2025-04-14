@@ -26,17 +26,13 @@ jobs:
 
       - name: Install SDL2 and SDL2_ttf
         run: |
-          # Create directories for SDL2 and SDL2_ttf
-          mkdir -p C:/SDL2
-          mkdir -p C:/SDL2_ttf
-          
-          # Download and extract SDL2
+          # Download SDL2 and SDL2_ttf
           curl -L https://github.com/libsdl-org/SDL/releases/download/release-2.32.4/SDL2-devel-2.32.4-mingw.zip -o SDL2.zip
-          7z x SDL2.zip -o.
-          
-          # Download and extract SDL2_ttf
           curl -L https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.24.0/SDL2_ttf-devel-2.24.0-mingw.zip -o SDL2_ttf.zip
-          7z x SDL2_ttf.zip -o.
+          
+          # Extract the archives (note the proper 7z syntax)
+          7z x SDL2.zip
+          7z x SDL2_ttf.zip
 
       - name: Build with MinGW
         run: |
