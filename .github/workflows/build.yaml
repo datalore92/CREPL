@@ -38,17 +38,42 @@ jobs:
           Get-ChildItem lib/SDL2/SDL2-2.32.4/lib/x64
           Get-ChildItem lib/SDL2_ttf/SDL2_ttf-2.24.0/lib/x64
 
+      - name: Create custom CMake script
+        run: |
+          # Create a custom CMake file to properly handle SDL2 paths for MinGW
+          @"
+          # Find SDL2 and SDL2_ttf in our fixed locations
+          set(SDL2_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/lib/SDL2/SDL2-2.32.4/include")
+          set(SDL2_LIBRARIES "${CMAKE_CURRENT_SOURCE_DIR}/lib/SDL2/SDL2-2.32.4/lib/x64/SDL2.lib" "${CMAKE_CURRENT_SOURCE_DIR}/lib/SDL2/SDL2-2.32.4/lib/x64/SDL2main.lib")
+          set(SDL2_TTF_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/lib/SDL2_ttf/SDL2_ttf-2.24.0/include")
+          set(SDL2_TTF_LIBRARIES "${CMAKE_CURRENT_SOURCE_DIR}/lib/SDL2_ttf/SDL2_ttf-2.24.0/lib/x64/SDL2_ttf.lib")
+          
+          # Set include directories
+          include_directories(${SDL2_INCLUDE_DIRS} ${SDL2_TTF_INCLUDE_DIRS})
+          "@ | Out-File -FilePath FindSDL2Custom.cmake -Encoding utf8
+
+      - name: Manual conversion of lib files for MinGW
+        run: |
+          # MinGW requires .a format, not .lib format
+          # Create the necessary directory structure
+          mkdir -p mingw_lib
+          
+          # Convert the .lib files to .a files for MinGW
+          pushd lib/SDL2/SDL2-2.32.4/lib/x64
+          C:/mingw64/bin/gendef SDL2.dll
+          C:/mingw64/bin/dlltool --dllname SDL2.dll --def SDL2.def --output-lib ../../../../mingw_lib/libSDL2.a
+          popd
+          
+          pushd lib/SDL2_ttf/SDL2_ttf-2.24.0/lib/x64
+          C:/mingw64/bin/gendef SDL2_ttf.dll
+          C:/mingw64/bin/dlltool --dllname SDL2_ttf.dll --def SDL2_ttf.def --output-lib ../../../../mingw_lib/libSDL2_ttf.a
+          popd
+
       - name: Build with MinGW
         run: |
           mkdir -p build
           cd build
-          # Need to pass library paths in a way MinGW can understand
-          cmake -G "MinGW Makefiles" .. -DCMAKE_C_FLAGS="-I../lib/SDL2/SDL2-2.32.4/include -I../lib/SDL2_ttf/SDL2_ttf-2.24.0/include" -DSDL2_INCLUDE_DIR="../lib/SDL2/SDL2-2.32.4/include" -DSDL2_TTF_INCLUDE_DIR="../lib/SDL2_ttf/SDL2_ttf-2.24.0/include" -DSDL2_LIBRARY="../lib/SDL2/SDL2-2.32.4/lib/x64/SDL2.lib;../lib/SDL2/SDL2-2.32.4/lib/x64/SDL2main.lib" -DSDL2_TTF_LIBRARY="../lib/SDL2_ttf/SDL2_ttf-2.24.0/lib/x64/SDL2_ttf.lib"
-          
-          # For debugging purposes - examine CMake cache
-          cat CMakeCache.txt | grep -i SDL
-          
-          # Use different syntax for linking
+          cmake -G "MinGW Makefiles" .. -DCMAKE_MODULE_PATH=.. -DCMAKE_C_FLAGS="-I../lib/SDL2/SDL2-2.32.4/include -I../lib/SDL2_ttf/SDL2_ttf-2.24.0/include" -DCMAKE_EXE_LINKER_FLAGS="-L../mingw_lib -lSDL2 -lSDL2_ttf -lmingw32"
           mingw32-make VERBOSE=1
 
       - name: Create Release Zip
