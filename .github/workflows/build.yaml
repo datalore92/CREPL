@@ -140,7 +140,11 @@ jobs:
               rpcrt4
               gdi32
               uuid
+              msvcrt
           )
+          
+          # Add msvcrt link option for setjmp function needed by SDL2_ttf
+          target_link_options(crepl PRIVATE -lmsvcrt)
           
           # Set subsystem properties
           set_target_properties(crepl PROPERTIES WIN32_EXECUTABLE TRUE)
