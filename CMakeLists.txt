@@ -74,6 +74,7 @@ set(SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/repl_variables.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/repl_history.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/repl_eval.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/setjmp_alias.c"
 )
 # Add setjmp_alias.c for Windows to fix _setjmp/_longjmp linking
 if (WIN32)
