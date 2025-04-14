@@ -1,0 +1,47 @@
+# Build directories
+build/
+out/
+bin/
+lib/SDL2/*/bin/
+lib/SDL2_ttf/*/bin/
+
+# IDE files
+.vs/
+.vscode/
+.idea/
+*.code-workspace
+
+# CMake generated files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+
+# Object files
+*.o
+*.obj
+*.ko
+*.elf
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Executables
+*.exe
+*.out
+*.app
+*.dll
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Dependency files
+*.d
+
+# OS specific files
+.DS_Store
+Thumbs.db

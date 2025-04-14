@@ -1,0 +1,113 @@
+name: Build CREPL
+
+on:
+  push:
+    tags:
+      - 'v*'  # Run on tag push of pattern v*, like v1.0.0, v20.15.10
+  workflow_dispatch:  # Allow manual trigger of workflow
+
+permissions:
+  contents: write  # Add explicit permission to create releases
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup MinGW using chocolatey
+        uses: crazy-max/ghaction-chocolatey@v2
+        with:
+          args: install mingw -y
+
+      - name: Add MinGW to PATH
+        run: echo "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Install SDL2 and SDL2_ttf
+        run: |
+          # Create directories for SDL2 and SDL2_ttf
+          mkdir -p C:/SDL2
+          mkdir -p C:/SDL2_ttf
+          
+          # Download and extract SDL2
+          curl -L https://github.com/libsdl-org/SDL/releases/download/release-2.32.4/SDL2-devel-2.32.4-mingw.zip -o SDL2.zip
+          7z x SDL2.zip -oC:/
+          
+          # Download and extract SDL2_ttf
+          curl -L https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.24.0/SDL2_ttf-devel-2.24.0-mingw.zip -o SDL2_ttf.zip
+          7z x SDL2_ttf.zip -oC:/
+          
+          # Create SDL2 structure
+          mkdir -p C:/SDL2/include/SDL2
+          mkdir -p C:/SDL2/lib
+          
+          # Copy SDL2 files
+          Copy-Item -Path C:/SDL2-2.32.4/x86_64-w64-mingw32/include/*.h -Destination C:/SDL2/include/SDL2/ -Recurse
+          Copy-Item -Path C:/SDL2-2.32.4/x86_64-w64-mingw32/lib/* -Destination C:/SDL2/lib/ -Recurse
+          
+          # Create SDL2_ttf structure
+          mkdir -p C:/SDL2_ttf/include/SDL2
+          mkdir -p C:/SDL2_ttf/lib
+          
+          # Copy SDL2_ttf files
+          Copy-Item -Path C:/SDL2_ttf-2.24.0/x86_64-w64-mingw32/include/*.h -Destination C:/SDL2_ttf/include/SDL2/ -Recurse
+          Copy-Item -Path C:/SDL2_ttf-2.24.0/x86_64-w64-mingw32/lib/* -Destination C:/SDL2_ttf/lib/ -Recurse
+
+      - name: Build with MinGW
+        run: |
+          mkdir -p build
+          cd build
+          cmake -G "MinGW Makefiles" -DCMAKE_PREFIX_PATH="C:/SDL2;C:/SDL2_ttf" ..
+          mingw32-make VERBOSE=1
+
+      - name: Create Release Zip
+        run: |
+          mkdir release
+          copy build\crepl.exe release\crepl.exe
+          copy C:\SDL2-2.32.4\x86_64-w64-mingw32\bin\SDL2.dll release\
+          copy C:\SDL2_ttf-2.24.0\x86_64-w64-mingw32\bin\SDL2_ttf.dll release\
+          
+          # SDL2_ttf requires additional DLLs
+          copy C:\SDL2_ttf-2.24.0\x86_64-w64-mingw32\bin\zlib1.dll release\
+          copy C:\SDL2_ttf-2.24.0\x86_64-w64-mingw32\bin\freetype.dll release\
+          
+          cd release
+          7z a ..\crepl-windows.zip *
+
+      - name: Upload Windows Build
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: crepl-windows.zip
+          token: ${{ github.token }}
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install SDL2 and SDL2_ttf
+        run: sudo apt-get update && sudo apt-get install -y libsdl2-dev libsdl2-ttf-dev
+
+      - name: Build with GCC
+        run: |
+          mkdir -p build
+          cd build
+          cmake ..
+          make
+
+      - name: Create Release Tar
+        run: |
+          mkdir -p release
+          cp build/crepl release/crepl
+          cd release
+          tar -czvf ../crepl-linux.tar.gz *
+
+      - name: Upload Linux Build
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: crepl-linux.tar.gz
+          token: ${{ github.token }}
