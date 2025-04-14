@@ -24,12 +24,6 @@ jobs:
       - name: Add MinGW to PATH
         run: echo "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
-      - name: Check SDL2 directory structure
-        run: |
-          # Verify the existing directory structure
-          Get-ChildItem lib/SDL2/SDL2-2.32.4/include
-          Get-ChildItem lib/SDL2_ttf/SDL2_ttf-2.24.0/include
-
       - name: Download SDL2 MinGW development libraries
         run: |
           # Download MinGW-compatible SDL2 development libraries
@@ -49,6 +43,21 @@ jobs:
           
           # List files in the mingw_lib directory
           Get-ChildItem mingw_lib
+          
+          # Examine SDL2 include directory structure
+          Write-Host "SDL2 Include Directory Structure:"
+          Get-ChildItem -Recurse SDL2-2.32.4/x86_64-w64-mingw32/include
+          Write-Host "SDL2_ttf Include Directory Structure:"
+          Get-ChildItem -Recurse SDL2_ttf-2.24.0/x86_64-w64-mingw32/include
+
+      - name: Prepare include directories
+        run: |
+          # Create a directory for modified headers if needed
+          mkdir -p include_sdl2
+          
+          # Copy SDL2 header files for easier inclusion
+          Copy-Item -Path SDL2-2.32.4/x86_64-w64-mingw32/include/* -Destination include_sdl2/ -Recurse
+          Copy-Item -Path SDL2_ttf-2.24.0/x86_64-w64-mingw32/include/* -Destination include_sdl2/ -Recurse
 
       - name: Create simplified CMakeLists.txt directly
         run: |
@@ -62,12 +71,15 @@ jobs:
           # SDL2 paths with absolute paths
           set(SDL2_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SDL2-2.32.4/x86_64-w64-mingw32/include")
           set(SDL2_TTF_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SDL2_ttf-2.24.0/x86_64-w64-mingw32/include")
+          set(SDL2_COMBINED_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/include_sdl2")
           
           # Include directories
           include_directories(
               "${CMAKE_CURRENT_SOURCE_DIR}/include"
               "${SDL2_INCLUDE_DIR}"
               "${SDL2_TTF_INCLUDE_DIR}"
+              "${SDL2_COMBINED_INCLUDE}"
+              "${SDL2_INCLUDE_DIR}/SDL2"  # Try with SDL2 subdirectory
           )
           
           # Source files with explicit paths
@@ -87,23 +99,65 @@ jobs:
           # Create executable
           add_executable(crepl ${SOURCES})
           
+          # Additional compiler flags for SDL
+          target_compile_definitions(crepl PRIVATE 
+              PLATFORM_WINDOWS=1 
+              _REENTRANT
+          )
+          
           # Set libraries
           target_link_libraries(crepl 
               mingw32
               "${CMAKE_CURRENT_SOURCE_DIR}/mingw_lib/libSDL2main.a"
               "${CMAKE_CURRENT_SOURCE_DIR}/mingw_lib/libSDL2.a"
               "${CMAKE_CURRENT_SOURCE_DIR}/mingw_lib/libSDL2_ttf.a"
+              imm32
+              setupapi
+              version
+              winmm
           )
           
           # Set subsystem properties
           set_target_properties(crepl PROPERTIES WIN32_EXECUTABLE TRUE)
-          
-          # Add compile definitions
-          target_compile_definitions(crepl PRIVATE PLATFORM_WINDOWS=1)
           '@
 
           # Write the CMakeLists.txt file
           Set-Content -Path "CMakeLists.txt" -Value $cmakeContent
+
+      - name: Inspect and fix header files if needed
+        run: |
+          # Check repl_core.h to see how it includes SDL.h
+          Get-Content include/repl_core.h
+          
+          # Create a simple wrapper if needed
+          if (Test-Path "include_sdl2/SDL.h") {
+              Write-Host "SDL.h already exists in the include directory"
+          } else {
+              @"
+          #ifndef SDL_H_WRAPPER
+          #define SDL_H_WRAPPER
+          
+          #include "SDL2/SDL.h"
+          
+          #endif /* SDL_H_WRAPPER */
+          "@ | Out-File -FilePath "include_sdl2/SDL.h" -Encoding utf8
+              Write-Host "Created SDL.h wrapper"
+          }
+          
+          # Also create SDL_ttf.h wrapper if needed
+          if (Test-Path "include_sdl2/SDL_ttf.h") {
+              Write-Host "SDL_ttf.h already exists in the include directory"
+          } else {
+              @"
+          #ifndef SDL_TTF_H_WRAPPER
+          #define SDL_TTF_H_WRAPPER
+          
+          #include "SDL2/SDL_ttf.h"
+          
+          #endif /* SDL_TTF_H_WRAPPER */
+          "@ | Out-File -FilePath "include_sdl2/SDL_ttf.h" -Encoding utf8
+              Write-Host "Created SDL_ttf.h wrapper"
+          }
 
       - name: Build with MinGW
         run: |
@@ -124,6 +178,7 @@ jobs:
           mingw32-make VERBOSE=1
 
       - name: Create Release Zip
+        if: success()
         run: |
           mkdir release
           copy build\crepl.exe release\crepl.exe
