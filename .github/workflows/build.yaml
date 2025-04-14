@@ -62,18 +62,26 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          # Use the MinGW-compatible libraries for linking
-          cmake -G "MinGW Makefiles" .. -DCMAKE_C_FLAGS="-I../lib/SDL2/SDL2-2.32.4/include -I../lib/SDL2_ttf/SDL2_ttf-2.24.0/include" -DCMAKE_EXE_LINKER_FLAGS="-L../mingw_lib -lmingw32 -lSDL2main -lSDL2 -lSDL2_ttf"
+          # First, run CMake without SDL2 flags to ensure compiler check passes
+          cmake -G "MinGW Makefiles" ..
+          
+          # Then run cmake again with the SDL2 paths
+          cmake -G "MinGW Makefiles" .. -DSDL2_INCLUDE_DIR="../lib/SDL2/SDL2-2.32.4/include" -DSDL2_TTF_INCLUDE_DIR="../lib/SDL2_ttf/SDL2_ttf-2.24.0/include" -DSDL2_LIBRARY="../mingw_lib/libSDL2.a;../mingw_lib/libSDL2main.a" -DSDL2_TTF_LIBRARY="../mingw_lib/libSDL2_ttf.a"
+          
+          # Build the project
           mingw32-make VERBOSE=1
 
       - name: Create Release Zip
         run: |
           mkdir release
           copy build\crepl.exe release\crepl.exe
-          copy lib\SDL2\SDL2-2.32.4\lib\x64\SDL2.dll release\
-          copy lib\SDL2_ttf\SDL2_ttf-2.24.0\lib\x64\SDL2_ttf.dll release\
-          copy lib\SDL2_ttf\SDL2_ttf-2.24.0\lib\x64\zlib1.dll release\
-          copy lib\SDL2_ttf\SDL2_ttf-2.24.0\lib\x64\freetype.dll release\
+          
+          # Copy SDL2 DLLs from the MinGW-compatible download
+          copy SDL2-2.32.4\x86_64-w64-mingw32\bin\SDL2.dll release\
+          copy SDL2_ttf-2.24.0\x86_64-w64-mingw32\bin\SDL2_ttf.dll release\
+          copy SDL2_ttf-2.24.0\x86_64-w64-mingw32\bin\zlib1.dll release\
+          copy SDL2_ttf-2.24.0\x86_64-w64-mingw32\bin\freetype.dll release\
+          
           cd release
           7z a ..\crepl-windows.zip *
 
