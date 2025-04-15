@@ -21,6 +21,38 @@ An enhanced, graphical Read-Eval-Print Loop (REPL) for evaluating C expressions,
 - **Customizable View Modes**: Toggle between scrolling, fixed, and paged views
 - **Cross-platform**: Works on both Windows and Linux systems
 
+## Download Pre-built Releases
+
+If you don't want to build from source, you can download pre-built binaries from the [GitHub Releases page](https://github.com/datalore92/CREPL/releases).
+
+### Windows
+
+1. Download the latest `crepl-windows.zip` file from the releases page
+2. Extract the ZIP file to a location of your choice
+3. Double-click on `crepl.exe` to run the program
+
+### Linux
+
+1. Download the latest `crepl-linux.tar.gz` file from the releases page
+2. Extract the archive with the following command:
+   ```bash
+   tar -xzf crepl-linux.tar.gz -C /path/to/destination
+   ```
+3. Make the executable file runnable:
+   ```bash
+   chmod +x /path/to/destination/crepl
+   ```
+4. Run the program:
+   ```bash
+   ./crepl
+   ```
+
+Note: On Linux, you may need to install the SDL2 and SDL2_ttf runtime libraries if they're not already installed:
+
+- **Ubuntu/Debian**: `sudo apt install libsdl2-2.0-0 libsdl2-ttf-2.0-0`
+- **Fedora/RHEL/CentOS**: `sudo dnf install SDL2 SDL2_ttf`
+- **Arch Linux**: `sudo pacman -S sdl2 sdl2_ttf`
+
 ## Requirements
 
 - Windows or Linux operating system
