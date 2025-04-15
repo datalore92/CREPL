@@ -52,19 +52,24 @@ jobs:
         cp /mingw64/bin/libbz2-1.dll releases/windows/
         cp /mingw64/bin/libpng16-16.dll releases/windows/
         cp /mingw64/bin/libharfbuzz-0.dll releases/windows/
-        
-        # Additional required runtime DLLs
         cp /mingw64/bin/libgcc_s_seh-1.dll releases/windows/
         cp /mingw64/bin/libwinpthread-1.dll releases/windows/
         cp /mingw64/bin/libstdc++-6.dll releases/windows/
-        
-        # Create zip archive
-        cd releases/windows
-        7z a ../../crepl-windows.zip *
-        
-        # Verify the ZIP was created
-        cd ../..
-        ls -la crepl-windows.zip
+        cp /mingw64/bin/libbrotlidec.dll releases/windows/
+        cp /mingw64/bin/libbrotlicommon.dll releases/windows/
+        cp /mingw64/bin/libintl-8.dll releases/windows/
+        cp /mingw64/bin/libgraphite2.dll releases/windows/
+        cp /mingw64/bin/libglib-2.0-0.dll releases/windows/
+        cp /mingw64/bin/libiconv-2.dll releases/windows/
+        cp /mingw64/bin/libpcre2-8-0.dll releases/windows/
+    
+    - name: Create ZIP Archive
+      shell: pwsh
+      run: |
+        cd ${{ github.workspace }}
+        Compress-Archive -Path "releases/windows/*" -DestinationPath "crepl-windows.zip" -Force
+        dir crepl-windows.zip
+    
     - uses: actions/upload-artifact@v4
       with:
         name: windows-build
