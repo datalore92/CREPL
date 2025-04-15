@@ -61,6 +61,11 @@ if(NOT SDL2_ttf_FOUND)
     endif()
 endif()
 
+# On Linux/Unix systems, find math library explicitly
+if(UNIX)
+    find_library(MATH_LIBRARY m REQUIRED)
+endif()
+
 # Include directories
 include_directories(include ${SDL2_INCLUDE_DIR} ${SDL2_TTF_INCLUDE_DIR})
 
@@ -87,6 +92,9 @@ add_executable(crepl ${SOURCES})
 # Link libraries
 if(SDL2_FOUND AND SDL2_ttf_FOUND)
     target_link_libraries(crepl SDL2::SDL2main SDL2::SDL2 SDL2_ttf::SDL2_ttf)
+    if(UNIX)
+        target_link_libraries(crepl ${MATH_LIBRARY})
+    endif()
 else()
     if(WIN32)
         target_link_libraries(crepl ${SDL2_LIBRARY} ${SDL2_TTF_LIBRARY})
@@ -104,8 +112,8 @@ else()
             $<TARGET_FILE_DIR:crepl>
         )
     elseif(LINUX)
-        # On Linux, we can use the simpler form since the libraries are in the system paths
-        target_link_libraries(crepl SDL2 SDL2_ttf m) # 'm' is the math library, often needed
+        # On Linux, ensure the math library is linked first for correct symbol resolution
+        target_link_libraries(crepl ${MATH_LIBRARY} SDL2 SDL2_ttf)
     endif()
 endif()
 
