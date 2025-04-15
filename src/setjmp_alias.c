@@ -12,7 +12,8 @@
 extern "C" {
 #endif
 
-EXPORT int _setjmp(jmp_buf env) { return setjmp(env); }
+// Updated signature to match MinGW definition
+EXPORT int _setjmp(jmp_buf env, void* ctx) { return setjmp(env); }
 EXPORT void _longjmp(jmp_buf env, int val) { longjmp(env, val); }
 
 #ifdef __cplusplus
