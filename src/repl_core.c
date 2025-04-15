@@ -2,6 +2,7 @@
 #include "../include/repl_input.h"
 #include "../include/repl_ui.h"
 #include "../include/repl_variables.h"
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
