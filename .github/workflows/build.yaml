@@ -1,230 +1,119 @@
-name: Build CREPL
+name: Build Releases
 
 on:
   push:
     tags:
-      - 'v*'  # Run on tag push of pattern v*, like v1.0.0, v20.15.10
+      - 'v*'
   workflow_dispatch:  # Allow manual trigger of workflow
-
-permissions:
-  contents: write  # Add explicit permission to create releases
 
 jobs:
   build-windows:
     runs-on: windows-latest
+    permissions:
+      contents: write
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Setup MinGW using chocolatey
-        uses: crazy-max/ghaction-chocolatey@v2
-        with:
-          args: install mingw -y
-
-      - name: Add MinGW to PATH
-        run: echo "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-      - name: Download SDL2 MinGW development libraries
-        run: |
-          # Download MinGW-compatible SDL2 development libraries
-          curl -L https://github.com/libsdl-org/SDL/releases/download/release-2.32.4/SDL2-devel-2.32.4-mingw.zip -o SDL2-mingw.zip
-          7z x SDL2-mingw.zip
-          
-          # Download MinGW-compatible SDL2_ttf development libraries
-          curl -L https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.24.0/SDL2_ttf-devel-2.24.0-mingw.zip -o SDL2_ttf-mingw.zip
-          7z x SDL2_ttf-mingw.zip
-          
-          # Create mingw_lib directory to store .a files
-          mkdir -p mingw_lib
-          
-          # Copy the MinGW-compatible library files
-          Copy-Item -Path SDL2-2.32.4/x86_64-w64-mingw32/lib/*.a -Destination mingw_lib/
-          Copy-Item -Path SDL2_ttf-2.24.0/x86_64-w64-mingw32/lib/*.a -Destination mingw_lib/
-          
-          # List files in the mingw_lib directory
-          Get-ChildItem mingw_lib
-          
-          # Examine SDL2 include directory structure
-          Write-Host "SDL2 Include Directory Structure:"
-          Get-ChildItem -Recurse SDL2-2.32.4/x86_64-w64-mingw32/include
-          Write-Host "SDL2_ttf Include Directory Structure:"
-          Get-ChildItem -Recurse SDL2_ttf-2.24.0/x86_64-w64-mingw32/include
-
-      - name: Prepare include directories
-        run: |
-          # Create a directory for modified headers if needed
-          mkdir -p include_sdl2
-          
-          # Create simple wrapper files directly instead of copying
-          @"
-          #ifndef SDL_H_WRAPPER
-          #define SDL_H_WRAPPER
-          
-          #include "${PWD}/SDL2-2.32.4/x86_64-w64-mingw32/include/SDL2/SDL.h"
-          
-          #endif /* SDL_H_WRAPPER */
-          "@ | Out-File -FilePath "include_sdl2/SDL.h" -Encoding utf8
-          Write-Host "Created SDL.h wrapper"
-          
-          @"
-          #ifndef SDL_TTF_H_WRAPPER
-          #define SDL_TTF_H_WRAPPER
-          
-          #include "${PWD}/SDL2_ttf-2.24.0/x86_64-w64-mingw32/include/SDL2/SDL_ttf.h"
-          
-          #endif /* SDL_TTF_H_WRAPPER */
-          "@ | Out-File -FilePath "include_sdl2/SDL_ttf.h" -Encoding utf8
-          Write-Host "Created SDL_ttf.h wrapper"
-          
-          # List created files
-          Get-ChildItem include_sdl2
-
-      - name: Create simplified CMakeLists.txt directly
-        run: |
-          $cmakeContent = @'
-          cmake_minimum_required(VERSION 3.10)
-          project(CREPL C)
-          
-          # Set C standard
-          set(CMAKE_C_STANDARD 11)
-          
-          # SDL2 paths with absolute paths
-          set(SDL2_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SDL2-2.32.4/x86_64-w64-mingw32/include")
-          set(SDL2_TTF_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SDL2_ttf-2.24.0/x86_64-w64-mingw32/include")
-          set(SDL2_COMBINED_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/include_sdl2")
-          
-          # Include directories
-          include_directories(
-              "${CMAKE_CURRENT_SOURCE_DIR}/include"
-              "${SDL2_COMBINED_INCLUDE}"
-              "${SDL2_INCLUDE_DIR}"
-              "${SDL2_TTF_INCLUDE_DIR}"
-              "${SDL2_INCLUDE_DIR}/SDL2"
-          )
-          
-          # Source files with explicit paths
-          set(SOURCES
-              "${CMAKE_CURRENT_SOURCE_DIR}/src/main.c"
-              "${CMAKE_CURRENT_SOURCE_DIR}/src/repl_core.c"
-              "${CMAKE_CURRENT_SOURCE_DIR}/src/repl_ui.c"
-              "${CMAKE_CURRENT_SOURCE_DIR}/src/repl_input.c"
-              "${CMAKE_CURRENT_SOURCE_DIR}/src/repl_variables.c"
-              "${CMAKE_CURRENT_SOURCE_DIR}/src/repl_history.c"
-              "${CMAKE_CURRENT_SOURCE_DIR}/src/repl_eval.c"
-              "${CMAKE_CURRENT_SOURCE_DIR}/src/setjmp_alias.c"
-          )
-          
-          # Display source files for debugging
-          message(STATUS "Source files: ${SOURCES}")
-          
-          # Create executable
-          add_executable(crepl ${SOURCES})
-          
-          # Additional compiler flags for SDL
-          target_compile_definitions(crepl PRIVATE 
-              PLATFORM_WINDOWS=1 
-              _REENTRANT
-          )
-          
-          # Set libraries
-          target_link_libraries(crepl 
-              mingw32
-              "${CMAKE_CURRENT_SOURCE_DIR}/mingw_lib/libSDL2main.a"
-              "${CMAKE_CURRENT_SOURCE_DIR}/mingw_lib/libSDL2.a"
-              "${CMAKE_CURRENT_SOURCE_DIR}/mingw_lib/libSDL2_ttf.a"
-              imm32
-              setupapi
-              version
-              winmm
-              ole32
-              oleaut32
-              rpcrt4
-              gdi32
-              uuid
-              msvcrt
-          )
-          
-          # Add msvcrt link option for setjmp function needed by SDL2_ttf
-          target_link_options(crepl PRIVATE -lmsvcrt)
-          
-          # Set subsystem properties
-          set_target_properties(crepl PROPERTIES WIN32_EXECUTABLE TRUE)
-          '@
-
-          # Write the CMakeLists.txt file
-          Set-Content -Path "CMakeLists.txt" -Value $cmakeContent
-
-      - name: Inspect header files
-        run: |
-          # Check repl_core.h to see how it includes SDL.h
-          Get-Content include/repl_core.h
-
-      - name: Build with MinGW
-        run: |
-          # Show the content of the custom CMakeLists.txt for debugging
-          Get-Content CMakeLists.txt
-          
-          # List source files to ensure they exist
-          Get-ChildItem src
-          
-          # Create build directory
-          mkdir -p build
-          cd build
-          
-          # Run CMake with the custom CMakeLists.txt
-          cmake -G "MinGW Makefiles" .. --debug-output
-          
-          # Build the project
-          mingw32-make VERBOSE=1
-
-      - name: Create Release Zip
-        if: success()
-        run: |
-          mkdir release
-          copy build\crepl.exe release\crepl.exe
-          
-          # Copy SDL2 DLLs from the MinGW-compatible download
-          copy SDL2-2.32.4\x86_64-w64-mingw32\bin\SDL2.dll release\
-          copy SDL2_ttf-2.24.0\x86_64-w64-mingw32\bin\SDL2_ttf.dll release\
-          copy SDL2_ttf-2.24.0\x86_64-w64-mingw32\bin\zlib1.dll release\
-          copy SDL2_ttf-2.24.0\x86_64-w64-mingw32\bin\freetype.dll release\
-          
-          cd release
-          7z a ..\crepl-windows.zip *
-
-      - name: Upload Windows Build
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: crepl-windows.zip
-          token: ${{ github.token }}
+    - uses: actions/checkout@v4
+    - name: Setup MSYS2
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        update: true
+        install: >-
+          mingw-w64-x86_64-gcc
+          mingw-w64-x86_64-SDL2
+          mingw-w64-x86_64-SDL2_ttf
+          mingw-w64-x86_64-cmake
+          mingw-w64-x86_64-make
+          mingw-w64-x86_64-harfbuzz
+    - name: Build
+      shell: msys2 {0}
+      run: |
+        mkdir -p build
+        cd build
+        # Use verbose build to see any errors
+        cmake .. -G "MinGW Makefiles" -DCMAKE_MAKE_PROGRAM=mingw32-make
+        mingw32-make VERBOSE=1
+    - name: Package
+      shell: msys2 {0}
+      run: |
+        # Create directory and copy executable
+        mkdir -p releases/windows
+        cp build/crepl.exe releases/windows/
+        
+        # List all DLL dependencies of the executable
+        echo "Listing DLL dependencies of the executable..."
+        ldd build/crepl.exe
+        
+        # Copy required DLLs using correct names
+        cp /mingw64/bin/SDL2.dll releases/windows/
+        cp /mingw64/bin/SDL2_ttf.dll releases/windows/
+        cp /mingw64/bin/libfreetype-6.dll releases/windows/
+        cp /mingw64/bin/zlib1.dll releases/windows/
+        cp /mingw64/bin/libbz2-1.dll releases/windows/
+        cp /mingw64/bin/libpng16-16.dll releases/windows/
+        cp /mingw64/bin/libharfbuzz-0.dll releases/windows/
+        
+        # Additional required runtime DLLs
+        cp /mingw64/bin/libgcc_s_seh-1.dll releases/windows/
+        cp /mingw64/bin/libwinpthread-1.dll releases/windows/
+        cp /mingw64/bin/libstdc++-6.dll releases/windows/
+        
+        # Create zip archive
+        cd releases/windows
+        7z a ../../crepl-windows.zip *
+        
+        # Verify the ZIP was created
+        cd ../..
+        ls -la crepl-windows.zip
+    - uses: actions/upload-artifact@v4
+      with:
+        name: windows-build
+        path: crepl-windows.zip
 
   build-linux:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc make cmake libsdl2-dev libsdl2-ttf-dev
+    - name: Build
+      run: |
+        mkdir build
+        cd build
+        cmake .. 
+        cmake --build . 
+    - name: Package
+      run: |
+        mkdir -p releases/linux
+        cp build/crepl releases/linux/
+        chmod +x releases/linux/crepl
+        cd releases/linux
+        tar czf ../../crepl-linux.tar.gz *
+    - uses: actions/upload-artifact@v4
+      with:
+        name: linux-build
+        path: crepl-linux.tar.gz
 
-      - name: Install SDL2 and SDL2_ttf
-        run: sudo apt-get update && sudo apt-get install -y libsdl2-dev libsdl2-ttf-dev
-
-      - name: Build with GCC
-        run: |
-          mkdir -p build
-          cd build
-          cmake ..
-          make
-
-      - name: Create Release Tar
-        run: |
-          mkdir -p release
-          cp build/crepl release/crepl
-          cd release
-          tar -czvf ../crepl-linux.tar.gz *
-
-      - name: Upload Linux Build
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: crepl-linux.tar.gz
-          token: ${{ github.token }}
+  create-release:
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/download-artifact@v4
+    - name: List Downloaded Artifacts
+      run: |
+        find . -type f -name "*.zip" -o -name "*.tar.gz"
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: |
+          windows-build/crepl-windows.zip
+          linux-build/crepl-linux.tar.gz
+        generate_release_notes: true
