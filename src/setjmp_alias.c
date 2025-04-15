@@ -12,8 +12,16 @@
 extern "C" {
 #endif
 
-// Updated signature to match MinGW definition
+// Platform-specific implementations
+#ifdef _WIN32
+// Windows (MinGW) requires the extra ctx parameter
 EXPORT int _setjmp(jmp_buf env, void* ctx) { return setjmp(env); }
+#else
+// Linux version doesn't have the extra parameter
+EXPORT int _setjmp(jmp_buf env) { return setjmp(env); }
+#endif
+
+// Common implementation for _longjmp
 EXPORT void _longjmp(jmp_buf env, int val) { longjmp(env, val); }
 
 #ifdef __cplusplus
